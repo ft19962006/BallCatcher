@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>奪球大戰</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#070710;font-family:'Exo 2',sans-serif;color:#e0e0e8;touch-action:none;-webkit-user-select:none;user-select:none}
+.dark html,.dark body{background:#070710}
+#game-wrapper{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:6px 6px 0}
+#hud{width:100%;max-width:620px;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-family:'Russo One',sans-serif;flex-shrink:0}
+.hud-score{display:flex;align-items:center;gap:6px;font-size:18px}
+.hud-score .label{font-size:12px;opacity:0.7;font-family:'Exo 2',sans-serif}
+.hud-score.player-side{color:#00E5FF}
+.hud-score.enemy-side{color:#FF3366}
+.hud-timer{font-size:22px;color:#FFD700;letter-spacing:2px;text-shadow:0 0 10px rgba(255,215,0,0.4)}
+#canvas-area{position:relative;width:100%;max-width:620px;flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-height:0}
+#canvas-wrapper{position:relative;width:100%;aspect-ratio:1/1;max-height:100%}
+canvas{width:100%;height:100%;display:block;border-radius:6px;border:1px solid #1a1a40}
+#status-bar{width:100%;max-width:620px;display:flex;justify-content:center;align-items:center;padding:4px 0;font-size:13px;min-height:28px;flex-shrink:0;gap:12px;font-family:'Exo 2',sans-serif}
+.status-item{display:flex;align-items:center;gap:4px;opacity:0.85}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.screen{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(7,7,16,0.94);z-index:20;border-radius:6px;padding:20px}
+.screen h1{font-family:'Russo One',sans-serif;font-size:clamp(28px,6vw,42px);margin-bottom:16px;color:#FFD700;text-shadow:0 0 20px rgba(255,215,0,0.3)}
+.screen p{font-size:clamp(13px,3vw,15px);margin-bottom:8px;text-align:center;max-width:380px;line-height:1.6;color:#b0b0c0}
+.screen .key-hint{display:inline-block;background:#1a1a40;border:1px solid #3a3a70;border-radius:4px;padding:1px 7px;font-size:12px;font-family:'Russo One',sans-serif;color:#FFD700;margin:0 2px}
+.btn{font-family:'Russo One',sans-serif;font-size:16px;padding:12px 36px;border:2px solid #FFD700;background:transparent;color:#FFD700;cursor:pointer;border-radius:6px;margin-top:18px;transition:all 0.2s;letter-spacing:1px}
+.btn:hover,.btn:active{background:#FFD700;color:#070710}
+.rules-box{background:rgba(20,20,50,0.6);border:1px solid #2a2a60;border-radius:8px;padding:14px 18px;margin:10px 0 4px;max-width:400px;text-align:left}
+.rules-box li{margin:4px 0;font-size:clamp(12px,2.8vw,14px);line-height:1.5}
+#touch-controls{display:none;width:100%;max-width:620px;padding:8px 16px;justify-content:space-between;align-items:center;flex-shrink:0}
+/* ── Virtual Joystick ── */
+.joy-zone{position:relative;width:130px;height:130px;-webkit-tap-highlight-color:transparent}
+.joy-base{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 50% 55%,rgba(10,10,35,0.95) 40%,rgba(20,20,60,0.85) 70%,rgba(30,30,80,0.6) 100%);border:2.5px solid rgba(0,229,255,0.3);box-shadow:inset 0 2px 12px rgba(0,0,0,0.6),0 0 18px rgba(0,229,255,0.08)}
+.joy-base::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.12)}
+.joy-knob{position:absolute;top:50%;left:50%;width:52px;height:52px;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle at 42% 38%,rgba(0,229,255,0.45) 0%,rgba(0,160,200,0.3) 35%,rgba(0,80,120,0.5) 70%,rgba(5,20,50,0.8) 100%);border:2px solid rgba(0,229,255,0.55);box-shadow:0 3px 10px rgba(0,0,0,0.5),inset 0 1px 3px rgba(255,255,255,0.12),0 0 14px rgba(0,229,255,0.15);transition:box-shadow 0.15s;pointer-events:none;will-change:transform}
+.joy-knob.active{box-shadow:0 2px 6px rgba(0,0,0,0.6),inset 0 1px 2px rgba(255,255,255,0.08),0 0 22px rgba(0,229,255,0.35);border-color:rgba(0,229,255,0.8)}
+.joy-dir{position:absolute;width:6px;height:6px;border-radius:50%;background:rgba(0,229,255,0.15)}
+.joy-dir-n{top:10px;left:50%;transform:translateX(-50%)}
+.joy-dir-s{bottom:10px;left:50%;transform:translateX(-50%)}
+.joy-dir-w{left:10px;top:50%;transform:translateY(-50%)}
+.joy-dir-e{right:10px;top:50%;transform:translateY(-50%)}
+.action-btn{width:72px;height:72px;border-radius:50%;border:3px solid rgba(255,215,0,0.6);background:rgba(255,215,0,0.1);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;position:relative}
+.action-btn:active{background:rgba(255,215,0,0.3);border-color:#FFD700}
+.action-dot{width:20px;height:20px;border-radius:50%;background:#FFD700;box-shadow:0 0 8px rgba(255,215,0,0.4);pointer-events:none;transition:opacity 0.06s}
+@keyframes dot-flash{0%{opacity:1;transform:scale(1)}30%{opacity:0.2;transform:scale(0.7)}100%{opacity:1;transform:scale(1)}}
+.action-dot.flash{animation:dot-flash 0.25s ease-out}
+@media(pointer:coarse){#touch-controls{display:flex}}
+@media(max-width:420px){.hud-score{font-size:15px}.hud-timer{font-size:18px}#hud{padding:4px 8px}}
+#pause-row{width:100%;max-width:620px;display:none;justify-content:center;padding:0 0 2px;flex-shrink:0}
+.pause-btn{font-family:'Exo 2',sans-serif;font-size:15px;padding:6px 22px;border:1.5px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.65);cursor:pointer;border-radius:6px;letter-spacing:0.5px;transition:all 0.15s;-webkit-tap-highlight-color:transparent;min-height:36px}
+.pause-btn:hover,.pause-btn:active{background:rgba(255,255,255,0.14);color:#fff;border-color:rgba(255,255,255,0.45)}
+.pause-btn[disabled]{opacity:0.3;pointer-events:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.blink{animation:pulse 0.5s infinite}
+/* ── Difficulty selection ── */
+.diff-label{font-family:'Russo One',sans-serif;font-size:15px;color:#FFD700;margin:14px 0 4px;letter-spacing:1px}
+.diff-btns{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;justify-content:center}
+.diff-btn{padding:10px 22px;font-size:14px;min-width:90px}
+.diff-btn.easy{border-color:#4CAF50;color:#4CAF50}
+.diff-btn.easy:hover,.diff-btn.easy:active{background:#4CAF50;color:#070710}
+.diff-btn.normal{border-color:#FFD700;color:#FFD700}
+.diff-btn.normal:hover,.diff-btn.normal:active{background:#FFD700;color:#070710}
+.diff-btn.hard{border-color:#FF3366;color:#FF3366}
+.diff-btn.hard:hover,.diff-btn.hard:active{background:#FF3366;color:#070710}
+/* ── Game over dual buttons ── */
+.gameover-btns{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;justify-content:center}
+.btn-secondary{border-color:#8888aa;color:#8888aa}
+.btn-secondary:hover,.btn-secondary:active{background:#8888aa;color:#070710}
+/* ── Pause overlay ── */
+.pause-overlay{display:none}
+.pause-overlay h1{font-size:clamp(36px,8vw,54px);margin-bottom:20px}
+.pause-btns{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:6px}
+.pause-btns .btn{min-width:180px;text-align:center}
+/* ── Sprint button ── */
+.sprint-btn{width:72px;height:72px;border-radius:50%;border:3px solid rgba(76,175,80,0.6);background:rgba(76,175,80,0.1);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;position:relative}
+.sprint-btn:active,.sprint-btn.held{background:rgba(76,175,80,0.35);border-color:#4CAF50}
+.sprint-dot{width:20px;height:20px;border-radius:50%;background:#4CAF50;box-shadow:0 0 8px rgba(76,175,80,0.4);pointer-events:none;transition:opacity 0.06s}
+.sprint-dot.flash{animation:dot-flash 0.25s ease-out}
+.right-btns{display:flex;gap:14px;align-items:center}
+/* ── Stamina bar ── */
+#stamina-row{width:100%;max-width:620px;display:none;padding:2px 16px 4px;flex-shrink:0}
+.stamina-wrap{width:100%;height:10px;background:rgba(255,255,255,0.08);border-radius:5px;overflow:hidden;position:relative}
+.stamina-fill{height:100%;background:linear-gradient(90deg,#4CAF50,#66BB6A);border-radius:5px;transition:width 0.08s linear;width:100%}
+.stamina-fill.exhausted{background:linear-gradient(90deg,#FF3333,#FF6644)}
+.stamina-label{font-family:'Exo 2',sans-serif;font-size:11px;color:rgba(255,255,255,0.5);text-align:center;margin-bottom:1px}
+</style>
+</head>
+<body>
+<div id="game-wrapper">
+  <div id="hud">
+    <div class="hud-score player-side"><span class="label">玩家</span><span id="p-score">0</span></div>
+    <div class="hud-timer" id="g-timer">3:00</div>
+    <div class="hud-score enemy-side"><span id="e-score">0</span><span class="label">電腦</span></div>
+  </div>
+  <div id="pause-row"><button id="pause-btn" class="pause-btn">⏸ 暫停</button></div>
+  <div id="canvas-area">
+    <div id="canvas-wrapper">
+      <canvas id="gc"></canvas>
+      <div id="start-screen" class="screen">
+        <h1>奪球大戰</h1>
+        <p>在場地內爭奪球體，攜帶球體前往你的得分區以獲得分數！</p>
+        <ol class="rules-box">
+          <li>使用 <span class="key-hint">W</span><span class="key-hint">A</span><span class="key-hint">S</span><span class="key-hint">D</span> 移動角色</li>
+          <li><span class="key-hint">空白鍵</span> 執拾 / 搶奪 / 拋棄球體</li>
+          <li>攜帶球體進入你的 <span style="color:#00E5FF">得分區</span>（右側 P 標記角落）</li>
+          <li>持球超過 10 秒未得分將被扣 1 分</li>
+          <li>拋棄球體後 10 秒內無人拾取亦被扣分</li>
+          <li>對手可搶奪你手中的球體！</li>
+        </ol>
+        <p class="diff-label">選擇難度</p>
+        <div class="diff-btns">
+          <button class="btn diff-btn easy" id="start-easy">容易</button>
+          <button class="btn diff-btn normal" id="start-normal">普通</button>
+          <button class="btn diff-btn hard" id="start-hard">困難</button>
+        </div>
+      </div>
+      <div id="gameover-screen" class="screen" style="display:none">
+        <h1 id="result-txt"></h1>
+        <p id="final-scores" style="font-size:20px;color:#e0e0e8"></p>
+        <p id="diff-display" style="font-size:14px;color:#8888aa;margin-top:2px"></p>
+        <div class="gameover-btns">
+          <button class="btn" id="restart-btn">重新遊玩</button>
+          <button class="btn btn-secondary" id="menu-btn">返回主介面</button>
+        </div>
+      </div>
+      <div id="pause-screen" class="screen pause-overlay">
+        <h1>暫停</h1>
+        <div class="pause-btns">
+          <button class="btn" id="resume-btn">繼續遊戲</button>
+          <button class="btn btn-secondary" id="pause-menu-btn">回到主介面</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="status-bar">
+    <div class="status-item" id="ball-status"></div>
+  </div>
+  <div id="touch-controls">
+    <div class="joy-zone" id="joy-zone">
+      <div class="joy-base" id="joy-base">
+        <span class="joy-dir joy-dir-n"></span>
+        <span class="joy-dir joy-dir-s"></span>
+        <span class="joy-dir joy-dir-w"></span>
+        <span class="joy-dir joy-dir-e"></span>
+        <div class="joy-knob" id="joy-knob"></div>
+      </div>
+    </div>
+    <div class="right-btns">
+      <button class="sprint-btn" id="sprint-btn"><span class="sprint-dot" id="sprint-dot"></span></button>
+      <button class="action-btn" id="action-btn"><span class="action-dot" id="action-dot"></span></button>
+    </div>
+  </div>
+  <div id="stamina-row">
+    <div class="stamina-label">體力</div>
+    <div class="stamina-wrap"><div class="stamina-fill" id="stamina-fill"></div></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONSTANTS
+   ============================================================ */
+const F = 600;               // logical field size
+const PR = 14;               // player/enemy radius
+const BR = 8;                // ball radius
+const ZS = 65;               // corner zone size
+const PICKUP_D = 34;         // pickup distance
+const STEAL_D = 38;          // steal distance
+const POSS_T = 10;           // possession timeout (seconds)
+const ABAND_T = 10;          // abandon timeout (seconds)
+const P_SPD = 210;           // player speed (px/s)
+const P_SPRINT_SPD = 310;    // player sprint speed (px/s)
+const E_SPD = 185;           // enemy speed (px/s)
+const STAMINA_MAX = 3.0;     // seconds of sprint capacity
+const STAMINA_REGEN = 3.0;   // seconds to fully recharge from zero
+const EXHAUST_DUR = 3.0;     // seconds player is frozen when stamina depleted
+const G_DUR = 180;           // game duration (seconds)
+const CD_PHASES = ['Ready', 'Get Set', 'Go'];
+const C_P = '#00E5FF';
+const C_E = '#FF3366';
+const C_BALL = '#FFD700';
+const C_FIELD = '#0d0d22';
+const C_GRID = '#161638';
+const C_OBS = '#15153a';
+const C_OBS_B = '#6366F1';
+
+/* ============================================================
+   CANVAS SETUP
+   ============================================================ */
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+let sc = 1;
+let dpr = 1;
+
+function resizeCanvas() {
+  const wr = document.getElementById('canvas-wrapper');
+  const sz = Math.min(wr.clientWidth, wr.clientHeight);
+  dpr = window.devicePixelRatio || 1;
+  canvas.width = sz * dpr;
+  canvas.height = sz * dpr;
+  canvas.style.width = sz + 'px';
+  canvas.style.height = sz + 'px';
+  sc = sz / F;
+}
+
+/* ============================================================
+   SOUND (Web Audio API)
+   ============================================================ */
+let aCtx;
+function initAudio() { if (!aCtx) aCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+function tone(freq, dur, type, vol) {
+  if (!aCtx) return;
+  type = type || 'sine'; vol = vol || 0.12;
+  var o = aCtx.createOscillator(), g = aCtx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, aCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, aCtx.currentTime + dur);
+  o.connect(g); g.connect(aCtx.destination);
+  o.start(); o.stop(aCtx.currentTime + dur);
+}
+function sfxPickup()  { tone(880, 0.12); setTimeout(function(){ tone(1100, 0.1); }, 60); }
+function sfxScore()   { tone(523, 0.1); setTimeout(function(){ tone(659, 0.1); }, 100); setTimeout(function(){ tone(784, 0.15); }, 200); }
+function sfxSteal()   { tone(260, 0.2, 'sawtooth', 0.1); }
+function sfxCD()      { tone(440, 0.25, 'triangle', 0.1); }
+function sfxGo()      { tone(880, 0.3, 'triangle', 0.15); }
+function sfxPenalty()  { tone(180, 0.3, 'square', 0.1); }
+
+/* ============================================================
+   POE CREATOR MONETIZATION (captureCost)
+   ============================================================ */
+/**
+ * Wrapper around window.Poe.captureCost for safe charge capturing.
+ * Amounts are in USD milli-cents (1/100,000 of a dollar).
+ * e.g. 100000 = $1.00, 2000 = $0.02
+ */
+function captureGameCost(amounts, logOutcome) {
+  if (!window.Poe || typeof window.Poe.captureCost !== 'function') return;
+  window.Poe.captureCost(amounts, { logChargeOutcome: !!logOutcome })
+    .then(function(res) {
+      if (logOutcome) {
+        console.log('[Monetization] captureCost result: ' + JSON.stringify(res));
+      }
+    })
+    .catch(function(err) {
+      console.log('[Monetization] captureCost error: ' + String(err));
+    });
+}
+
+/* ============================================================
+   GAME STATE
+   ============================================================ */
+var gState = 'MENU';       /* MENU | COUNTDOWN | PLAYING | PAUSED | ANNOUNCE | GAMEOVER */
+var cdPhase = 0, cdTimer = 0;
+var gTimer = G_DUR;
+var announceText = '';     /* text shown during ANNOUNCE state */
+var announceColor = '#FFF';
+var announceTimer = 0;     /* seconds remaining for announcement display */
+var player = { x: F * 0.28, y: F / 2, score: 0, hasBall: false, color: C_P, lbl: '玩家' };
+var enemy  = { x: F * 0.77, y: F / 2, score: 0, hasBall: false, color: C_E, lbl: '電腦',
+  stealCD: 0, pickupCD: 0, dropCD: 0, decisionCD: 0, recoilCD: 0,
+  stuckT: 0, lastSX: 0, lastSY: 0, juke: 0, jukeDir: 0,
+  targetZone: null, aiSpd: E_SPD };
+var ball   = { x: F / 2, y: F / 2, free: true, holder: null, inAir: false, airT: 0, airDur: 0.7, asx: 0, asy: 0, aex: 0, aey: 0, airZ: 0, possT: 0, abandT: 0, abandActive: false, lastDrop: null, stolenFrom: null };
+var obstacles = [];
+var zones = [];
+var particles = [];
+var keys = {};
+
+/* ── Stamina / Sprint ── */
+var pStamina = STAMINA_MAX;        /* player stamina (seconds remaining) */
+var pExhaust = 0;                  /* player exhaustion freeze timer */
+var pSprinting = false;            /* is player currently sprinting? */
+var eStamina = STAMINA_MAX;        /* enemy stamina */
+var eExhaust = 0;                  /* enemy exhaustion freeze timer */
+var eSprinting = false;            /* is enemy currently sprinting? */
+var sprintTouchHeld = false;       /* is the sprint touch button being held? */
+
+/* ============================================================
+   UTILITY FUNCTIONS
+   ============================================================ */
+function dist(a, b) { return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)); }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function circRectHit(cx, cy, cr, rx, ry, rw, rh) {
+  var nx = clamp(cx, rx, rx + rw), ny = clamp(cy, ry, ry + rh);
+  var dx = cx - nx, dy = cy - ny;
+  return dx * dx + dy * dy < cr * cr;
+}
+
+function resolveCircRect(cx, cy, cr, rx, ry, rw, rh) {
+  var nx = clamp(cx, rx, rx + rw), ny = clamp(cy, ry, ry + rh);
+  var dx = cx - nx, dy = cy - ny;
+  var d = Math.sqrt(dx * dx + dy * dy);
+  if (d > 0 && d < cr) {
+    var ov = cr - d;
+    return { x: cx + (dx / d) * ov, y: cy + (dy / d) * ov };
+  }
+  if (d === 0) {
+    var eds = [cx - rx, rx + rw - cx, cy - ry, ry + rh - cy];
+    var mi = eds.indexOf(Math.min.apply(null, eds));
+    if (mi === 0) return { x: rx - cr, y: cy };
+    if (mi === 1) return { x: rx + rw + cr, y: cy };
+    if (mi === 2) return { x: cx, y: ry - cr };
+    return { x: cx, y: ry + rh + cr };
+  }
+  return { x: cx, y: cy };
+}
+
+function moveEnt(e, dx, dy, dt, spd) {
+  var nx = e.x + dx * spd * dt;
+  var ny = e.y + dy * spd * dt;
+  nx = clamp(nx, PR, F - PR);
+  ny = clamp(ny, PR, F - PR);
+  for (var i = 0; i < obstacles.length; i++) {
+    var ob = obstacles[i];
+    if (circRectHit(nx, ny, PR, ob.x, ob.y, ob.w, ob.h)) {
+      var res = resolveCircRect(nx, ny, PR, ob.x, ob.y, ob.w, ob.h);
+      nx = res.x; ny = res.y;
+    }
+  }
+  nx = clamp(nx, PR, F - PR);
+  ny = clamp(ny, PR, F - PR);
+  e.x = nx; e.y = ny;
+}
+
+function pointInZone(px, py, z) {
+  return px > z.x && px < z.x + z.w && py > z.y && py < z.y + z.h;
+}
+
+/* ============================================================
+   AI PATHFINDING UTILITIES
+   ============================================================ */
+/* Liang-Barsky: returns entry-t of line (x1,y1)→(x2,y2) vs padded obstacle, -1 if miss */
+function lineHitsObs(x1, y1, x2, y2, ob, pad) {
+  pad = pad || (PR + 4);
+  var rx = ob.x - pad, ry = ob.y - pad, rw = ob.w + pad * 2, rh = ob.h + pad * 2;
+  var ldx = x2 - x1, ldy = y2 - y1;
+  var p = [-ldx, ldx, -ldy, ldy];
+  var q = [x1 - rx, rx + rw - x1, y1 - ry, ry + rh - y1];
+  var tMin = 0, tMax = 1;
+  for (var i = 0; i < 4; i++) {
+    if (Math.abs(p[i]) < 0.001) { if (q[i] < 0) return -1; continue; }
+    var tv = q[i] / p[i];
+    if (p[i] < 0) { if (tv > tMin) tMin = tv; }
+    else { if (tv < tMax) tMax = tv; }
+    if (tMin > tMax) return -1;
+  }
+  return tMin;
+}
+
+/* Find closest obstacle blocking line between two points */
+function getBlocker(ax, ay, bx, by) {
+  var best = null, bestT = 2;
+  for (var i = 0; i < obstacles.length; i++) {
+    var ht = lineHitsObs(ax, ay, bx, by, obstacles[i]);
+    if (ht >= 0 && ht < bestT) { bestT = ht; best = obstacles[i]; }
+  }
+  return best;
+}
+
+/* Pick waypoint corner around an obstacle that minimises path cost */
+function wpAround(ax, ay, bx, by, ob) {
+  var pad = PR + 6;
+  var cx = [ob.x - pad, ob.x + ob.w + pad];
+  var cy = [ob.y - pad, ob.y + ob.h + pad];
+  var bestC = null, bestCost = Infinity;
+  for (var ci = 0; ci < 2; ci++) {
+    for (var cj = 0; cj < 2; cj++) {
+      var wx = cx[ci], wy = cy[cj];
+      if (wx < PR || wx > F - PR || wy < PR || wy > F - PR) continue;
+      /* skip if inside another obstacle */
+      var inside = false;
+      for (var k = 0; k < obstacles.length; k++) {
+        if (obstacles[k] === ob) continue;
+        if (circRectHit(wx, wy, PR + 2, obstacles[k].x, obstacles[k].y, obstacles[k].w, obstacles[k].h)) { inside = true; break; }
+      }
+      if (inside) continue;
+      var cost = Math.sqrt((ax - wx) * (ax - wx) + (ay - wy) * (ay - wy)) +
+                 Math.sqrt((bx - wx) * (bx - wx) + (by - wy) * (by - wy));
+      if (cost < bestCost) { bestCost = cost; bestC = { x: wx, y: wy }; }
+    }
+  }
+  return bestC;
+}
+
+/* Get navigation target: direct if clear, else waypoint around blocker */
+function aiNav(ax, ay, bx, by) {
+  var blocker = getBlocker(ax, ay, bx, by);
+  if (!blocker) return { x: bx, y: by };
+  var wp = wpAround(ax, ay, bx, by, blocker);
+  return wp || { x: bx, y: by };
+}
+
+/* ============================================================
+   INITIALIZATION
+   ============================================================ */
+function initGame() {
+  player = { x: F * 0.28, y: F / 2, score: 0, hasBall: false, color: C_P, lbl: '玩家' };
+  enemy  = { x: F * 0.77, y: F / 2, score: 0, hasBall: false, color: C_E, lbl: '電腦',
+    stealCD: 0, pickupCD: 0, dropCD: 0, decisionCD: 0, recoilCD: 0,
+    stuckT: 0, lastSX: F * 0.77, lastSY: F / 2, juke: 0, jukeDir: 0,
+    targetZone: null, aiSpd: E_SPD };
+  ball   = { x: F / 2, y: F / 2, free: true, holder: null, inAir: false, airT: 0, airDur: 0.7,
+             asx: 0, asy: 0, aex: 0, aey: 0, airZ: 0, possT: 0,
+             abandT: 0, abandActive: false, lastDrop: null, stolenFrom: null };
+  gTimer = G_DUR;
+  particles = [];
+  pStamina = STAMINA_MAX; pExhaust = 0; pSprinting = false;
+  eStamina = STAMINA_MAX; eExhaust = 0; eSprinting = false;
+  genObstacles();
+  assignZones();
+}
+
+function genObstacles() {
+  obstacles = [];
+  var count = 4 + Math.floor(Math.random() * 5);
+  var excl = [
+    { x: F / 2 - 55, y: F / 2 - 55, w: 110, h: 110 },
+    { x: F * 0.28 - 30, y: F / 2 - 30, w: 60, h: 60 },
+    { x: F * 0.77 - 30, y: F / 2 - 30, w: 60, h: 60 },
+    { x: -2, y: -2, w: ZS + 14, h: ZS + 14 },
+    { x: F - ZS - 12, y: -2, w: ZS + 14, h: ZS + 14 },
+    { x: -2, y: F - ZS - 12, w: ZS + 14, h: ZS + 14 },
+    { x: F - ZS - 12, y: F - ZS - 12, w: ZS + 14, h: ZS + 14 }
+  ];
+  for (var i = 0; i < count; i++) {
+    var att = 0, ob;
+    do {
+      var t = Math.random();
+      if (t < 0.4)      ob = { x: 40 + Math.random() * (F - 130), y: 40 + Math.random() * (F - 130), w: 30 + Math.random() * 55, h: 30 + Math.random() * 55 };
+      else if (t < 0.7) ob = { x: 40 + Math.random() * (F - 180), y: 50 + Math.random() * (F - 100), w: 60 + Math.random() * 80, h: 18 + Math.random() * 26 };
+      else               ob = { x: 50 + Math.random() * (F - 100), y: 40 + Math.random() * (F - 180), w: 18 + Math.random() * 26, h: 60 + Math.random() * 80 };
+      att++;
+    } while (att < 60 && isExcluded(ob, excl));
+    if (att < 60) obstacles.push(ob);
+  }
+}
+
+function isExcluded(ob, excl) {
+  for (var i = 0; i < excl.length; i++) {
+    var z = excl[i];
+    if (ob.x < z.x + z.w && ob.x + ob.w > z.x && ob.y < z.y + z.h && ob.y + ob.h > z.y) return true;
+  }
+  for (var j = 0; j < obstacles.length; j++) {
+    var e = obstacles[j];
+    if (ob.x < e.x + e.w + 12 && ob.x + ob.w + 12 > e.x && ob.y < e.y + e.h + 12 && ob.y + ob.h + 12 > e.y) return true;
+  }
+  return false;
+}
+
+function assignZones() {
+  /* Fixed positions:
+     Player zones: top-right (corner 1) & bottom-right (corner 3)
+     Enemy zones:  top-left  (corner 0) & bottom-left  (corner 2) */
+  var pos = [
+    { x: 0, y: 0 },           // corner 0: top-left
+    { x: F - ZS, y: 0 },      // corner 1: top-right
+    { x: 0, y: F - ZS },      // corner 2: bottom-left
+    { x: F - ZS, y: F - ZS }  // corner 3: bottom-right
+  ];
+  zones = [
+    { corner: 1, owner: 'player', x: pos[1].x, y: pos[1].y, w: ZS, h: ZS },
+    { corner: 3, owner: 'player', x: pos[3].x, y: pos[3].y, w: ZS, h: ZS },
+    { corner: 0, owner: 'enemy',  x: pos[0].x, y: pos[0].y, w: ZS, h: ZS },
+    { corner: 2, owner: 'enemy',  x: pos[2].x, y: pos[2].y, w: ZS, h: ZS }
+  ];
+}
+
+function resetPositions() {
+  player.x = F * 0.28; player.y = F / 2; player.hasBall = false;
+  enemy.x = F * 0.77;  enemy.y = F / 2;  enemy.hasBall = false;
+  enemy.stuckT = 0; enemy.lastSX = F * 0.77; enemy.lastSY = F / 2; enemy.juke = 0;
+  enemy.targetZone = null; enemy.decisionCD = 0; enemy.dropCD = 0; enemy.recoilCD = 0;
+  ball.x = F / 2; ball.y = F / 2; ball.free = true; ball.holder = null;
+  ball.inAir = false; ball.airT = 0; ball.airZ = 0;
+  ball.possT = 0; ball.abandT = 0; ball.abandActive = false; ball.lastDrop = null; ball.stolenFrom = null;
+  /* restore stamina for both sides after score/penalty */
+  pStamina = STAMINA_MAX; pExhaust = 0; pSprinting = false;
+  eStamina = STAMINA_MAX; eExhaust = 0; eSprinting = false;
+}
+
+/* ============================================================
+   INPUT
+   ============================================================ */
+document.addEventListener('keydown', function(e) {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key === ' ' || e.code === 'Space') {
+    e.preventDefault();
+    var dot = document.getElementById('action-dot');
+    dot.classList.remove('flash');
+    void dot.offsetWidth;
+    dot.classList.add('flash');
+    handleAction();
+  }
+  /* pause toggle */
+  if (e.key === 'p' || e.key === 'Escape') { e.preventDefault(); togglePause(); }
+  /* prevent arrow keys from scrolling the page */
+  if (e.key.indexOf('Arrow') === 0) { e.preventDefault(); }
+});
+document.addEventListener('keyup', function(e) {
+  keys[e.key.toLowerCase()] = false;
+});
+
+/* ── Virtual Joystick ── */
+var joyX = 0, joyY = 0;       /* normalised –1…1 joystick axes */
+var joyTouchId = null;         /* track which touch owns the joystick */
+var joyBaseEl  = document.getElementById('joy-base');
+var joyKnobEl = document.getElementById('joy-knob');
+var JOY_MAX_R  = 36;           /* max knob displacement in px */
+
+function joyFromTouch(touch) {
+  var rect = joyBaseEl.getBoundingClientRect();
+  var cx = rect.left + rect.width / 2;
+  var cy = rect.top  + rect.height / 2;
+  var dx = touch.clientX - cx;
+  var dy = touch.clientY - cy;
+  var len = Math.sqrt(dx * dx + dy * dy);
+  /* clamp to radius */
+  if (len > JOY_MAX_R) { dx = dx / len * JOY_MAX_R; dy = dy / len * JOY_MAX_R; len = JOY_MAX_R; }
+  /* dead-zone: ignore tiny movements */
+  var deadZone = 6;
+  if (len < deadZone) { joyX = 0; joyY = 0; dx = 0; dy = 0; }
+  else { joyX = dx / JOY_MAX_R; joyY = dy / JOY_MAX_R; }
+  /* move the knob visually */
+  joyKnobEl.style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))';
+}
+
+function joyReset() {
+  joyX = 0; joyY = 0; joyTouchId = null;
+  joyKnobEl.style.transform = 'translate(-50%, -50%)';
+  joyKnobEl.classList.remove('active');
+}
+
+document.getElementById('joy-zone').addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  if (joyTouchId !== null) return; /* already tracking a finger */
+  var t = e.changedTouches[0];
+  joyTouchId = t.identifier;
+  joyKnobEl.classList.add('active');
+  joyFromTouch(t);
+}, { passive: false });
+
+document.getElementById('joy-zone').addEventListener('touchmove', function(e) {
+  e.preventDefault();
+  for (var i = 0; i < e.changedTouches.length; i++) {
+    if (e.changedTouches[i].identifier === joyTouchId) {
+      joyFromTouch(e.changedTouches[i]);
+      return;
+    }
+  }
+}, { passive: false });
+
+document.getElementById('joy-zone').addEventListener('touchend', function(e) {
+  for (var i = 0; i < e.changedTouches.length; i++) {
+    if (e.changedTouches[i].identifier === joyTouchId) { joyReset(); return; }
+  }
+}, { passive: false });
+
+document.getElementById('joy-zone').addEventListener('touchcancel', function(e) {
+  for (var i = 0; i < e.changedTouches.length; i++) {
+    if (e.changedTouches[i].identifier === joyTouchId) { joyReset(); return; }
+  }
+}, { passive: false });
+
+document.getElementById('action-btn').addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  /* flash the dot */
+  var dot = document.getElementById('action-dot');
+  dot.classList.remove('flash');
+  void dot.offsetWidth; /* force reflow to restart animation */
+  dot.classList.add('flash');
+  handleAction();
+}, { passive: false });
+
+/* ── Sprint touch button (hold to sprint) ── */
+document.getElementById('sprint-btn').addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  sprintTouchHeld = true;
+  document.getElementById('sprint-btn').classList.add('held');
+  var dot = document.getElementById('sprint-dot');
+  dot.classList.remove('flash');
+  void dot.offsetWidth;
+  dot.classList.add('flash');
+}, { passive: false });
+document.getElementById('sprint-btn').addEventListener('touchend', function(e) {
+  e.preventDefault();
+  sprintTouchHeld = false;
+  document.getElementById('sprint-btn').classList.remove('held');
+}, { passive: false });
+document.getElementById('sprint-btn').addEventListener('touchcancel', function(e) {
+  e.preventDefault();
+  sprintTouchHeld = false;
+  document.getElementById('sprint-btn').classList.remove('held');
+}, { passive: false });
+
+function handleAction() {
+  if (gState === 'MENU') return; /* use difficulty buttons instead */
+  if (gState !== 'PLAYING') return;
+
+  var db = dist(player, ball);
+  var de = dist(player, enemy);
+
+  if (player.hasBall) {
+    dropBall(player);
+  } else if (!ball.inAir && ball.free && db < PICKUP_D) {
+    pickupBall(player);
+  } else if (enemy.hasBall && de < STEAL_D) {
+    stealBall(player, enemy);
+  }
+}
+
+/* ============================================================
+   BALL MECHANICS
+   ============================================================ */
+function pickupBall(ent) {
+  ball.free = false; ball.holder = ent; ent.hasBall = true;
+  ball.possT = POSS_T;
+  ball.abandActive = false; ball.abandT = 0; ball.lastDrop = null;
+  ball.inAir = false; ball.stolenFrom = null;
+  sfxPickup();
+  addParts(ball.x, ball.y, C_BALL, 10);
+}
+
+function dropBall(ent) {
+  ent.hasBall = false;
+  ball.holder = null; ball.free = false;
+  ball.inAir = true; ball.airT = 0; ball.airDur = 0.5;
+  ball.asx = ent.x; ball.asy = ent.y;
+
+  /* ── determine throw direction from movement input (keyboard or joystick) ── */
+  var throwDx = 0, throwDy = 0;
+  if (ent === player) {
+    if (joyX !== 0 || joyY !== 0) {
+      throwDx = joyX; throwDy = joyY;
+    } else {
+      if (keys['w'] || keys['arrowup'])    throwDy = -1;
+      if (keys['s'] || keys['arrowdown'])  throwDy = 1;
+      if (keys['a'] || keys['arrowleft'])  throwDx = -1;
+      if (keys['d'] || keys['arrowright']) throwDx = 1;
+    }
+  }
+  var ang;
+  if (throwDx !== 0 || throwDy !== 0) {
+    ang = Math.atan2(throwDy, throwDx);
+  } else {
+    ang = Math.random() * Math.PI * 2;
+  }
+  /* add slight random spread ±15° */
+  ang += (Math.random() - 0.5) * (Math.PI / 6);
+
+  /* throw distance: 55–95 px */
+  var dd = 55 + Math.random() * 40;
+  var lx = clamp(ent.x + Math.cos(ang) * dd, BR + 4, F - BR - 4);
+  var ly = clamp(ent.y + Math.sin(ang) * dd, BR + 4, F - BR - 4);
+
+  /* avoid landing inside obstacle */
+  for (var i = 0; i < obstacles.length; i++) {
+    var ob = obstacles[i];
+    if (lx > ob.x - BR && lx < ob.x + ob.w + BR && ly > ob.y - BR && ly < ob.y + ob.h + BR) {
+      var altAng = ang + Math.PI * 0.5;
+      lx = clamp(ent.x + Math.cos(altAng) * dd * 0.7, BR + 4, F - BR - 4);
+      ly = clamp(ent.y + Math.sin(altAng) * dd * 0.7, BR + 4, F - BR - 4);
+      break;
+    }
+  }
+
+  ball.aex = lx; ball.aey = ly; ball.airZ = 0;
+  ball.possT = 0;
+  ball.abandActive = false; ball.lastDrop = ent; ball.stolenFrom = null;
+}
+
+function stealBall(stealer, holder) {
+  holder.hasBall = false;
+  ball.holder = null; ball.free = false;
+  ball.inAir = true; ball.airT = 0; ball.airDur = 0.7;
+  ball.asx = holder.x; ball.asy = holder.y;
+
+  /* ── bias landing toward the stealer (away from holder) ── */
+  var baseAng = Math.atan2(stealer.y - holder.y, stealer.x - holder.x);
+  /* add small random spread ±25° */
+  var ang = baseAng + (Math.random() - 0.5) * (Math.PI / 3.6);
+  /* increased landing distance: 80–140 px from the holder */
+  var dd = 80 + Math.random() * 60;
+  var lx = clamp(holder.x + Math.cos(ang) * dd, BR + 4, F - BR - 4);
+  var ly = clamp(holder.y + Math.sin(ang) * dd, BR + 4, F - BR - 4);
+
+  /* avoid landing inside obstacle — try opposite side if needed */
+  for (var i = 0; i < obstacles.length; i++) {
+    var ob = obstacles[i];
+    if (lx > ob.x - BR && lx < ob.x + ob.w + BR && ly > ob.y - BR && ly < ob.y + ob.h + BR) {
+      /* try perpendicular offsets to find clear spot */
+      var altAng = ang + Math.PI * 0.5;
+      lx = clamp(holder.x + Math.cos(altAng) * dd * 0.8, BR + 4, F - BR - 4);
+      ly = clamp(holder.y + Math.sin(altAng) * dd * 0.8, BR + 4, F - BR - 4);
+      break;
+    }
+  }
+  ball.aex = lx; ball.aey = ly; ball.airZ = 0;
+  ball.possT = 0; ball.abandActive = false; ball.lastDrop = null;
+
+  /* track who was stolen from so AI can apply recoil */
+  ball.stolenFrom = holder;
+
+  /* apply recoil to the holder (stun period) */
+  if (holder === enemy) {
+    enemy.recoilCD = DIFF_ACTIVE.recoilCD;
+    enemy.pickupCD = Math.max(enemy.pickupCD, DIFF_ACTIVE.recoilPickupCD);
+  }
+
+  sfxSteal(); addParts(holder.x, holder.y, '#FF6600', 12);
+}
+
+function checkScoring(ent) {
+  if (!ent.hasBall) return false;
+  var ownerType = ent === player ? 'player' : 'enemy';
+  for (var i = 0; i < zones.length; i++) {
+    var z = zones[i];
+    if (z.owner === ownerType && pointInZone(ent.x, ent.y, z)) {
+      ent.score++;
+      ent.hasBall = false;
+      sfxScore(); addParts(ent.x, ent.y, ent.color, 24);
+      addParts(z.x + z.w / 2, z.y + z.h / 2, C_BALL, 16);
+      /* ── Poe Creator Revenue: charge when player scores ── */
+      if (ent === player) {
+        captureGameCost([
+          { amountUsdMilliCents: 1000, description: '奪球大戰 — 玩家得分' }
+        ], true);
+      }
+      resetPositions();
+      var whoScored = ent === player ? 'Player' : 'NPC';
+      showAnnounce(whoScored + ' Point +1', ent === player ? C_P : C_E);
+      return true;
+    }
+  }
+  return false;
+}
+
+/* ============================================================
+   COUNTDOWN & GAME FLOW
+   ============================================================ */
+function startCountdown() {
+  gState = 'COUNTDOWN'; cdPhase = 0; cdTimer = 1;
+  sfxCD();
+}
+
+function startGame(diff) {
+  if (diff) applyDifficulty(diff);
+  initAudio(); initGame();
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('gameover-screen').style.display = 'none';
+  /* ── Poe Creator Revenue: charge per game session ── */
+  captureGameCost([
+    { amountUsdMilliCents: 2000, description: '奪球大戰 — 開始新遊戲' }
+  ], true);
+  startCountdown();
+}
+
+function returnToMenu() {
+  gState = 'MENU';
+  document.getElementById('gameover-screen').style.display = 'none';
+  document.getElementById('pause-screen').style.display = 'none';
+  document.getElementById('start-screen').style.display = 'flex';
+}
+
+function resumeGame() {
+  if (gState === 'PAUSED') {
+    gState = 'PLAYING';
+  }
+}
+
+function showAnnounce(text, color) {
+  announceText = text;
+  announceColor = color || '#FFFFFF';
+  announceTimer = 3;
+  gState = 'ANNOUNCE';
+}
+
+function togglePause() {
+  if (gState === 'PLAYING') {
+    gState = 'PAUSED';
+  } else if (gState === 'PAUSED') {
+    gState = 'PLAYING';
+  }
+}
+
+function endGame() {
+  gState = 'GAMEOVER';
+  var scr = document.getElementById('gameover-screen');
+  scr.style.display = 'flex';
+  var rt;
+  if (player.score > enemy.score) rt = '玩家勝利！';
+  else if (enemy.score > player.score) rt = '電腦勝利';
+  else rt = '平局';
+  document.getElementById('result-txt').textContent = rt;
+  document.getElementById('final-scores').textContent = '玩家 ' + player.score + ' : ' + enemy.score + ' 電腦';
+  var diffNames = { easy: '容易', normal: '普通', hard: '困難' };
+  document.getElementById('diff-display').textContent = '難度：' + (diffNames[gameDifficulty] || '普通');
+  /* ── Poe Creator Revenue: charge for game completion ── */
+  captureGameCost([
+    { amountUsdMilliCents: 1000, description: '奪球大戰 — 遊戲結算' }
+  ], true);
+}
+
+/* ============================================================
+   AI LOGIC — raycast pathfinding + strategic decisions
+   ============================================================ */
+
+/* Difficulty system */
+var gameDifficulty = 'normal'; /* 'easy' | 'normal' | 'hard' */
+
+/* Speed constants for different AI states */
+var AI_SPRINT = 188;   /* chasing free ball or intercepting */
+var AI_CARRY  = 166;   /* carrying ball — slightly slower */
+var AI_BASE   = E_SPD; /* default movement */
+var AI_HESITATION = 0; /* post-countdown reaction delay (seconds remaining) */
+
+/* Difficulty presets */
+var DIFF_PRESETS = {
+  easy: {
+    AI_SPRINT: 155, AI_CARRY: 138, AI_BASE: 155,
+    pickupCD: 1.6, hesitation: 1.4, stealCD: 2.2, recoilCD: 1.3,
+    recoilPickupCD: 1.2, adaptMult: 0.3, spdCap: P_SPD - 10,
+    useIntercept: false, hesitMult: 0.35, decisionCD_min: 0.8, decisionCD_range: 0.6,
+    aiSprintChance: 0.05, aiSprintBoost: 40
+  },
+  normal: {
+    AI_SPRINT: 188, AI_CARRY: 166, AI_BASE: E_SPD,
+    pickupCD: 1.0, hesitation: 0.75, stealCD: 1.4, recoilCD: 0.85,
+    recoilPickupCD: 0.7, adaptMult: 1.0, spdCap: P_SPD + 8,
+    useIntercept: true, hesitMult: 0.45, decisionCD_min: 0.4, decisionCD_range: 0.3,
+    aiSprintChance: 0.25, aiSprintBoost: 55
+  },
+  hard: {
+    AI_SPRINT: 204, AI_CARRY: 182, AI_BASE: 196,
+    pickupCD: 0.45, hesitation: 0.25, stealCD: 0.8, recoilCD: 0.4,
+    recoilPickupCD: 0.3, adaptMult: 1.8, spdCap: P_SPD + 18,
+    useIntercept: true, hesitMult: 0.7, decisionCD_min: 0.15, decisionCD_range: 0.15,
+    aiSprintChance: 0.55, aiSprintBoost: 70
+  }
+};
+var DIFF_ACTIVE = DIFF_PRESETS.normal;
+
+/* Hard mode: player movement tracking for prediction */
+var playerTrack = { vx: 0, vy: 0, prevX: 0, prevY: 0, smooth: 0.85 };
+
+function applyDifficulty(diff) {
+  gameDifficulty = diff;
+  DIFF_ACTIVE = DIFF_PRESETS[diff] || DIFF_PRESETS.normal;
+  AI_SPRINT = DIFF_ACTIVE.AI_SPRINT;
+  AI_CARRY  = DIFF_ACTIVE.AI_CARRY;
+  AI_BASE   = DIFF_ACTIVE.AI_BASE;
+  playerTrack.vx = 0; playerTrack.vy = 0;
+  playerTrack.prevX = 0; playerTrack.prevY = 0;
+}
+
+/* Pick best enemy zone: favours zones where AI has an advantage over player */
+function aiBestZone() {
+  var best = null, bestS = -Infinity;
+  for (var i = 0; i < zones.length; i++) {
+    if (zones[i].owner !== 'enemy') continue;
+    var zx = zones[i].x + zones[i].w / 2, zy = zones[i].y + zones[i].h / 2;
+    var eDist = dist(enemy, { x: zx, y: zy });
+    var pDist = dist(player, { x: zx, y: zy });
+    /* score: prefer zones AI reaches sooner than player AND player is far from */
+    var sc = (pDist - eDist) + pDist * 0.15;
+    /* slight random perturbation so AI occasionally picks suboptimal zone */
+    sc += (Math.random() - 0.5) * 30;
+    if (sc > bestS) { bestS = sc; best = zones[i]; }
+  }
+  return best;
+}
+
+/* Compute interception point when player has ball */
+function aiIntercept() {
+  /* find player's nearest owned zone (likely destination) */
+  var pz = null, pd = Infinity;
+  for (var i = 0; i < zones.length; i++) {
+    if (zones[i].owner !== 'player') continue;
+    var d = dist(player, { x: zones[i].x + zones[i].w / 2, y: zones[i].y + zones[i].h / 2 });
+    if (d < pd) { pd = d; pz = zones[i]; }
+  }
+  if (!pz || pd < 60) return { x: player.x, y: player.y }; /* too close to zone, just chase */
+
+  var zx = pz.x + pz.w / 2, zy = pz.y + pz.h / 2;
+
+  /* sample points along player→zone line, pick one AI can reach first */
+  var lpx = zx - player.x, lpy = zy - player.y;
+  var lpLen = Math.sqrt(lpx * lpx + lpy * lpy);
+  if (lpLen < 1) return { x: player.x, y: player.y };
+  lpx /= lpLen; lpy /= lpLen;
+
+  var bestPt = null, bestAdv = -Infinity;
+  for (var t = 20; t < lpLen; t += 25) {
+    var ix = player.x + lpx * t;
+    var iy = player.y + lpy * t;
+    var playerT = t / P_SPD;
+    var enemyT  = dist(enemy, { x: ix, y: iy }) / AI_SPRINT;
+    var adv = playerT - enemyT;
+    if (adv > bestAdv) { bestAdv = adv; bestPt = { x: ix, y: iy }; }
+  }
+
+  /* if AI can't intercept anywhere, chase player directly */
+  if (!bestPt || bestAdv < -0.3) {
+    /* Hard mode: predict player position using tracked velocity */
+    if (gameDifficulty === 'hard') {
+      var predT = 0.4;
+      var px = clamp(player.x + playerTrack.vx * predT, PR, F - PR);
+      var py = clamp(player.y + playerTrack.vy * predT, PR, F - PR);
+      return { x: px, y: py };
+    }
+    return { x: player.x, y: player.y };
+  }
+  return bestPt;
+}
+
+function updateAI(dt) {
+  if (gState !== 'PLAYING') return;
+
+  /* Hard mode: track player velocity for prediction */
+  if (gameDifficulty === 'hard' && dt > 0) {
+    var rawVx = (player.x - playerTrack.prevX) / dt;
+    var rawVy = (player.y - playerTrack.prevY) / dt;
+    playerTrack.vx = playerTrack.vx * playerTrack.smooth + rawVx * (1 - playerTrack.smooth);
+    playerTrack.vy = playerTrack.vy * playerTrack.smooth + rawVy * (1 - playerTrack.smooth);
+    playerTrack.prevX = player.x;
+    playerTrack.prevY = player.y;
+  }
+
+  /* tick cooldowns */
+  enemy.stealCD    = Math.max(0, enemy.stealCD - dt);
+  enemy.pickupCD   = Math.max(0, enemy.pickupCD - dt);
+  enemy.dropCD     = Math.max(0, enemy.dropCD - dt);
+  enemy.decisionCD = Math.max(0, enemy.decisionCD - dt);
+  enemy.recoilCD   = Math.max(0, enemy.recoilCD - dt);
+
+  /* tick post-countdown hesitation */
+  AI_HESITATION = Math.max(0, AI_HESITATION - dt);
+
+  /* adaptive difficulty: boost speed when behind in score */
+  var scoreDiff = player.score - enemy.score;
+  var adaptBoost = clamp(scoreDiff * 3 * DIFF_ACTIVE.adaptMult, 0, 15 * DIFF_ACTIVE.adaptMult);
+
+  var tx, ty, spd = AI_BASE + adaptBoost;
+
+  /* during hesitation, reduce speed */
+  var hesitMult = AI_HESITATION > 0 ? DIFF_ACTIVE.hesitMult : 1;
+
+  /* ── CARRY: enemy has ball → head to best zone ── */
+  if (enemy.hasBall) {
+    spd = AI_CARRY + adaptBoost;
+
+    /* re-evaluate zone periodically */
+    if (!enemy.targetZone || enemy.decisionCD <= 0) {
+      enemy.targetZone = aiBestZone();
+      enemy.decisionCD = DIFF_ACTIVE.decisionCD_min + Math.random() * DIFF_ACTIVE.decisionCD_range;
+    }
+
+    if (enemy.targetZone) {
+      tx = enemy.targetZone.x + enemy.targetZone.w / 2;
+      ty = enemy.targetZone.y + enemy.targetZone.h / 2;
+    } else {
+      tx = F / 2; ty = F / 2;
+    }
+
+    /* strategic drop: if possession timer is low and far from zone */
+    if (ball.possT < 3.2 && enemy.targetZone && enemy.dropCD <= 0) {
+      var zDist = dist(enemy, { x: tx, y: ty });
+      if (zDist > 160) {
+        dropBall(enemy);
+        enemy.pickupCD = 0.18;
+        enemy.dropCD = 6;
+        return;
+      }
+    }
+
+  /* ── STEAL / INTERCEPT: player has ball ── */
+  } else if (player.hasBall) {
+    spd = AI_SPRINT + adaptBoost;
+
+    /* attempt steal if close */
+    if (dist(enemy, player) < STEAL_D && enemy.stealCD <= 0) {
+      stealBall(enemy, player);
+      enemy.stealCD = DIFF_ACTIVE.stealCD;
+      return;
+    }
+
+    /* interception: predict where player is headed and cut them off */
+    if (DIFF_ACTIVE.useIntercept) {
+      var intPt = aiIntercept();
+      tx = intPt.x; ty = intPt.y;
+    } else {
+      /* easy mode: just chase player directly */
+      tx = player.x; ty = player.y;
+    }
+
+  /* ── CHASE BALL: ball is free on the ground ── */
+  } else if (ball.free && !ball.inAir) {
+    /* if still in recoil, approach slowly instead of sprinting */
+    if (enemy.recoilCD > 0) {
+      spd = AI_BASE * 0.45;
+    } else {
+      spd = AI_SPRINT + adaptBoost;
+    }
+    tx = ball.x; ty = ball.y;
+
+    /* Hard mode: if player is closer to ball, predict their arrival and try to beat them */
+    if (gameDifficulty === 'hard' && enemy.recoilCD <= 0) {
+      var pBallD = dist(player, ball);
+      var eBallD = dist(enemy, ball);
+      if (pBallD < eBallD && pBallD < 120) {
+        /* predict where player will be in ~0.3s and try to cut them off near the ball */
+        var predX = clamp(player.x + playerTrack.vx * 0.3, PR, F - PR);
+        var predY = clamp(player.y + playerTrack.vy * 0.3, PR, F - PR);
+        /* position between ball and predicted player position */
+        tx = ball.x * 0.6 + predX * 0.4;
+        ty = ball.y * 0.6 + predY * 0.4;
+      }
+    }
+
+    /* pickup with slight reaction delay */
+    if (dist(enemy, ball) < PICKUP_D && enemy.pickupCD <= 0) {
+      pickupBall(enemy);
+      return;
+    }
+
+  /* ── ANTICIPATE: ball is in the air ── */
+  } else if (ball.inAir) {
+    if (enemy.recoilCD > 0) {
+      /* recoil: move AWAY from ball landing spot at reduced speed */
+      spd = AI_BASE * 0.5;
+      var awayAng = Math.atan2(enemy.y - ball.aey, enemy.x - ball.aex);
+      tx = enemy.x + Math.cos(awayAng) * 80;
+      ty = enemy.y + Math.sin(awayAng) * 80;
+      tx = clamp(tx, PR, F - PR);
+      ty = clamp(ty, PR, F - PR);
+    } else {
+      spd = AI_SPRINT + adaptBoost;
+      tx = ball.aex; ty = ball.aey;
+    }
+
+  /* ── IDLE: drift to center ── */
+  } else {
+    tx = F / 2; ty = F / 2;
+  }
+
+  if (tx === undefined) return;
+
+  /* ── MOVEMENT with raycast pathfinding ── */
+  var nav = aiNav(enemy.x, enemy.y, tx, ty);
+  var dx = nav.x - enemy.x, dy = nav.y - enemy.y;
+  var d = Math.sqrt(dx * dx + dy * dy);
+  if (d < 2) return;
+  dx /= d; dy /= d;
+
+  /* anti-stuck detection */
+  enemy.stuckT += dt;
+  if (enemy.stuckT > 1.2) {
+    var md = Math.sqrt((enemy.x - enemy.lastSX) * (enemy.x - enemy.lastSX) +
+                       (enemy.y - enemy.lastSY) * (enemy.y - enemy.lastSY));
+    if (md < 6) {
+      enemy.juke = 0.5;
+      enemy.jukeDir = Math.random() > 0.5 ? 1 : -1;
+    }
+    enemy.lastSX = enemy.x; enemy.lastSY = enemy.y;
+    enemy.stuckT = 0;
+  }
+  if (enemy.juke > 0) {
+    enemy.juke -= dt;
+    var tmpDx = dx;
+    dx = -dy * enemy.jukeDir;
+    dy = tmpDx * enemy.jukeDir;
+  }
+
+  /* cap speed based on difficulty */
+  spd = Math.min(spd, DIFF_ACTIVE.spdCap);
+
+  /* apply hesitation slowdown (post-countdown reaction time) */
+  spd *= hesitMult;
+
+  /* ── AI sprint / stamina ── */
+  if (eExhaust > 0) {
+    /* exhausted: cannot move */
+    eExhaust -= dt;
+    eSprinting = false;
+    eStamina = Math.min(STAMINA_MAX, eStamina + (STAMINA_MAX / STAMINA_REGEN) * dt);
+    if (eExhaust <= 0) eExhaust = 0;
+    return; /* skip movement entirely while exhausted */
+  }
+
+  /* decide whether to sprint: based on difficulty chance, and only when urgently needed */
+  var aiWantSprint = false;
+  if (eStamina > 0.5) {
+    /* sprint when chasing free ball and player is closer, or when carrying and player is near */
+    if (ball.free && !ball.inAir && !enemy.hasBall) {
+      var eBd = dist(enemy, ball);
+      var pBd = dist(player, ball);
+      if (pBd < eBd && eBd < 180) aiWantSprint = Math.random() < DIFF_ACTIVE.aiSprintChance;
+    } else if (enemy.hasBall && dist(enemy, player) < 120) {
+      aiWantSprint = Math.random() < DIFF_ACTIVE.aiSprintChance;
+    } else if (player.hasBall && dist(enemy, player) < 100) {
+      aiWantSprint = Math.random() < DIFF_ACTIVE.aiSprintChance;
+    }
+  }
+
+  if (aiWantSprint && eStamina > 0) {
+    eSprinting = true;
+    spd += DIFF_ACTIVE.aiSprintBoost;
+    eStamina -= dt;
+    if (eStamina <= 0) {
+      eStamina = 0;
+      eExhaust = EXHAUST_DUR;
+      eSprinting = false;
+      addParts(enemy.x, enemy.y, '#FF8800', 8);
+      return;
+    }
+  } else {
+    eSprinting = false;
+    eStamina = Math.min(STAMINA_MAX, eStamina + (STAMINA_MAX / STAMINA_REGEN) * dt);
+  }
+
+  var mag = Math.sqrt(dx * dx + dy * dy);
+  if (mag > 0) { dx /= mag; dy /= mag; }
+  moveEnt(enemy, dx, dy, dt, spd);
+}
+
+/* ============================================================
+   PARTICLES
+   ============================================================ */
+function addParts(x, y, col, n) {
+  for (var i = 0; i < n; i++) {
+    particles.push({
+      x: x, y: y,
+      vx: (Math.random() - 0.5) * 220,
+      vy: (Math.random() - 0.5) * 220,
+      life: 0.4 + Math.random() * 0.5,
+      maxLife: 0.4 + Math.random() * 0.5,
+      col: col,
+      sz: 2 + Math.random() * 3
+    });
+  }
+}
+
+/* ============================================================
+   UPDATE
+   ============================================================ */
+function update(dt) {
+  dt = Math.min(dt, 0.05);
+
+  /* ANNOUNCE — score/penalty text displayed for 3 seconds, then countdown */
+  if (gState === 'ANNOUNCE') {
+    announceTimer -= dt;
+    if (announceTimer <= 0) {
+      startCountdown();
+    }
+  }
+
+  /* COUNTDOWN */
+  if (gState === 'COUNTDOWN') {
+    cdTimer -= dt;
+    if (cdTimer <= 0) {
+      cdPhase++;
+      if (cdPhase >= CD_PHASES.length) {
+        gState = 'PLAYING';
+        sfxGo();
+        enemy.pickupCD = DIFF_ACTIVE.pickupCD;
+        AI_HESITATION = DIFF_ACTIVE.hesitation;
+      } else {
+        cdTimer = 1;
+        if (cdPhase < CD_PHASES.length) sfxCD();
+      }
+    }
+  }
+
+  /* PLAYING */
+  if (gState === 'PLAYING') {
+    gTimer -= dt;
+    if (gTimer <= 0) { gTimer = 0; endGame(); return; }
+
+    /* ── Player sprint / stamina ── */
+    var wantSprint = keys['shift'] || sprintTouchHeld;
+    if (pExhaust > 0) {
+      /* exhausted: cannot move at all */
+      pExhaust -= dt;
+      pSprinting = false;
+      /* stamina recovers during exhaustion too */
+      pStamina = Math.min(STAMINA_MAX, pStamina + (STAMINA_MAX / STAMINA_REGEN) * dt);
+      if (pExhaust <= 0) { pExhaust = 0; }
+    }
+
+    /* player movement (keyboard + joystick) */
+    var pdx = 0, pdy = 0;
+    if (keys['w'] || keys['arrowup']) pdy = -1;
+    if (keys['s'] || keys['arrowdown']) pdy = 1;
+    if (keys['a'] || keys['arrowleft']) pdx = -1;
+    if (keys['d'] || keys['arrowright']) pdx = 1;
+    if (pdx !== 0 && pdy !== 0) { var n = 1 / Math.sqrt(2); pdx *= n; pdy *= n; }
+    /* joystick overrides keyboard when active */
+    if (joyX !== 0 || joyY !== 0) { pdx = joyX; pdy = joyY; }
+    var pMag = Math.sqrt(pdx * pdx + pdy * pdy);
+    if (pMag > 1) { pdx /= pMag; pdy /= pMag; }
+
+    if (pExhaust > 0) {
+      /* frozen — no movement */
+      pSprinting = false;
+    } else if (pMag > 0.01) {
+      /* determine speed: sprint or normal */
+      var pSpd = P_SPD;
+      if (wantSprint && pStamina > 0) {
+        pSprinting = true;
+        pSpd = P_SPRINT_SPD;
+        pStamina -= dt;
+        if (pStamina <= 0) {
+          pStamina = 0;
+          pExhaust = EXHAUST_DUR;
+          pSprinting = false;
+          addParts(player.x, player.y, '#FF8800', 8);
+        }
+      } else {
+        pSprinting = false;
+        /* recover stamina when not sprinting */
+        pStamina = Math.min(STAMINA_MAX, pStamina + (STAMINA_MAX / STAMINA_REGEN) * dt);
+      }
+      moveEnt(player, pdx, pdy, dt, pSpd);
+    } else {
+      pSprinting = false;
+      /* idle: recover stamina */
+      pStamina = Math.min(STAMINA_MAX, pStamina + (STAMINA_MAX / STAMINA_REGEN) * dt);
+    }
+
+    /* AI */
+    updateAI(dt);
+
+    /* ball follows holder */
+    if (ball.holder) { ball.x = ball.holder.x; ball.y = ball.holder.y; }
+
+    /* ball in air animation */
+    if (ball.inAir) {
+      ball.airT += dt;
+      var t = ball.airT / ball.airDur;
+      if (t >= 1) {
+        ball.x = ball.aex; ball.y = ball.aey;
+        ball.inAir = false; ball.free = true; ball.airZ = 0;
+        /* ball lands — start abandon timer; preserve lastDrop if set by dropBall */
+        ball.abandActive = true; ball.abandT = ABAND_T;
+      } else {
+        ball.x = ball.asx + (ball.aex - ball.asx) * t;
+        ball.y = ball.asy + (ball.aey - ball.asy) * t;
+        ball.airZ = 65 * 4 * t * (1 - t);
+      }
+    }
+
+    /* scoring — checked BEFORE timers so entering zone on expiry frame counts */
+    if (player.hasBall && checkScoring(player)) { /* scored, positions reset */ }
+    else if (enemy.hasBall && checkScoring(enemy)) { /* scored, positions reset */ }
+
+    /* possession timer (only if still playing after scoring check) */
+    if (gState === 'PLAYING' && ball.holder) {
+      ball.possT -= dt;
+      if (ball.possT <= 0) {
+        var penEnt = ball.holder;
+        penEnt.score--;
+        sfxPenalty();
+        addParts(penEnt.x, penEnt.y, '#FF0000', 14);
+        resetPositions();
+        var whoPen = penEnt === player ? 'Player' : 'NPC';
+        showAnnounce(whoPen + ' Point -1', '#FF3333');
+      }
+    }
+
+    /* abandon timer */
+    if (gState === 'PLAYING' && ball.abandActive && ball.free && !ball.inAir) {
+      ball.abandT -= dt;
+      if (ball.abandT <= 0) {
+        var abdEnt = ball.lastDrop;
+        if (abdEnt) {
+          abdEnt.score--;
+          sfxPenalty();
+          addParts(ball.x, ball.y, '#FF0000', 10);
+          resetPositions();
+          var whoAbd = abdEnt === player ? 'Player' : 'NPC';
+          showAnnounce(whoAbd + ' Point -1', '#FF3333');
+        } else {
+          ball.abandActive = false; ball.abandT = 0; ball.lastDrop = null;
+        }
+      }
+    }
+  }
+
+  /* particles */
+  for (var i = particles.length - 1; i >= 0; i--) {
+    var p = particles[i];
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vx *= 0.97; p.vy *= 0.97;
+    p.life -= dt;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render() {
+  var s = sc * dpr;
+  ctx.save();
+  ctx.scale(s, s);
+
+  /* field bg */
+  ctx.fillStyle = C_FIELD;
+  ctx.fillRect(0, 0, F, F);
+
+  /* grid */
+  ctx.strokeStyle = C_GRID;
+  ctx.lineWidth = 0.5;
+  for (var gi = 0; gi <= F; gi += 30) {
+    ctx.beginPath(); ctx.moveTo(gi, 0); ctx.lineTo(gi, F); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, gi); ctx.lineTo(F, gi); ctx.stroke();
+  }
+
+  /* center circle */
+  ctx.strokeStyle = '#222255';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(F / 2, F / 2, 40, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(F / 2, 0); ctx.lineTo(F / 2, F); ctx.stroke();
+
+  /* scoring zones */
+  for (var zi = 0; zi < zones.length; zi++) {
+    var z = zones[zi];
+    var zc = z.owner === 'player' ? C_P : C_E;
+    /* fill */
+    ctx.fillStyle = zc + '22';
+    ctx.fillRect(z.x, z.y, z.w, z.h);
+    /* diagonal stripes */
+    ctx.save();
+    ctx.beginPath(); ctx.rect(z.x, z.y, z.w, z.h); ctx.clip();
+    ctx.strokeStyle = zc + '30';
+    ctx.lineWidth = 1.5;
+    for (var si = -z.w; si < z.w + z.h; si += 8) {
+      ctx.beginPath(); ctx.moveTo(z.x + si, z.y); ctx.lineTo(z.x + si - z.h, z.y + z.h); ctx.stroke();
+    }
+    ctx.restore();
+    /* border */
+    ctx.strokeStyle = zc + '88';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(z.x + 1, z.y + 1, z.w - 2, z.h - 2);
+    /* label */
+    ctx.fillStyle = zc;
+    ctx.font = 'bold 13px "Russo One"';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(z.owner === 'player' ? 'P' : 'E', z.x + z.w / 2, z.y + z.h / 2);
+  }
+
+  /* obstacles */
+  for (var oi = 0; oi < obstacles.length; oi++) {
+    var ob = obstacles[oi];
+    ctx.fillStyle = C_OBS;
+    ctx.fillRect(ob.x, ob.y, ob.w, ob.h);
+    ctx.strokeStyle = C_OBS_B + '55';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(ob.x, ob.y, ob.w, ob.h);
+    /* glow */
+    ctx.save();
+    ctx.shadowColor = C_OBS_B;
+    ctx.shadowBlur = 6;
+    ctx.strokeStyle = C_OBS_B + '33';
+    ctx.strokeRect(ob.x, ob.y, ob.w, ob.h);
+    ctx.restore();
+  }
+
+  /* ball shadow when in air */
+  if (ball.inAir && ball.airZ > 0) {
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(ball.x, ball.y, BR + 3, BR / 2 + 1, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  /* ball (only if not held) */
+  if (!ball.holder) {
+    var bdy = ball.inAir ? ball.y - ball.airZ : ball.y;
+    ctx.save();
+    ctx.shadowColor = C_BALL;
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = C_BALL;
+    ctx.beginPath(); ctx.arc(ball.x, bdy, BR, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    /* pickup range hint for player */
+    if (ball.free && !ball.inAir) {
+      var dp = dist(player, ball);
+      if (dp < PICKUP_D + 20 && dp > PICKUP_D * 0.3) {
+        var a = 1 - (dp / (PICKUP_D + 20));
+        ctx.strokeStyle = 'rgba(255,215,0,' + (a * 0.4).toFixed(2) + ')';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.arc(ball.x, ball.y, PICKUP_D, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    /* abandon timer ring */
+    if (ball.abandActive && !ball.inAir) {
+      var pct = ball.abandT / ABAND_T;
+      ctx.strokeStyle = pct > 0.3 ? '#FF8800' : '#FF2222';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(ball.x, bdy, BR + 6, -Math.PI / 2, -Math.PI / 2 + pct * Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  /* entities */
+  drawEnt(player);
+  drawEnt(enemy);
+
+  /* possession timer bar */
+  if (ball.holder) {
+    var c = ball.holder;
+    var pp = ball.possT / POSS_T;
+    var bw = 32, bh = 4;
+    var bx = c.x - bw / 2, by = c.y - PR - 14;
+    ctx.fillStyle = '#222';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = pp > 0.3 ? '#4CAF50' : '#FF3333';
+    ctx.fillRect(bx, by, bw * pp, bh);
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(bx, by, bw, bh);
+    /* blink warning */
+    if (pp <= 0.3) {
+      var blink = Math.sin(Date.now() * 0.01) > 0;
+      if (blink) {
+        ctx.fillStyle = 'rgba(255,0,0,0.08)';
+        ctx.beginPath(); ctx.arc(c.x, c.y, PR + 10, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+
+  /* particles */
+  for (var pi = 0; pi < particles.length; pi++) {
+    var pt = particles[pi];
+    var al = pt.life / pt.maxLife;
+    ctx.globalAlpha = al;
+    ctx.fillStyle = pt.col;
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.sz * al, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  /* countdown overlay */
+  if (gState === 'COUNTDOWN') {
+    ctx.fillStyle = 'rgba(7,7,16,0.55)';
+    ctx.fillRect(0, 0, F, F);
+    ctx.save();
+    ctx.shadowColor = '#fff';
+    ctx.shadowBlur = 25;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '54px "Russo One"';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    var cdScale = 1 + Math.max(0, 0.3 - (1 - cdTimer)) * 2;
+    ctx.translate(F / 2, F / 2);
+    ctx.scale(cdScale, cdScale);
+    ctx.fillText(CD_PHASES[cdPhase], 0, 0);
+    ctx.restore();
+  }
+
+  /* announce overlay (score / penalty) */
+  if (gState === 'ANNOUNCE') {
+    ctx.fillStyle = 'rgba(7,7,16,0.65)';
+    ctx.fillRect(0, 0, F, F);
+    ctx.save();
+    ctx.shadowColor = announceColor;
+    ctx.shadowBlur = 25;
+    ctx.fillStyle = announceColor;
+    ctx.font = '36px "Russo One"';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    /* gentle pulse based on timer */
+    var aPulse = 1 + Math.sin(announceTimer * 3) * 0.04;
+    ctx.translate(F / 2, F / 2);
+    ctx.scale(aPulse, aPulse);
+    ctx.fillText(announceText, 0, 0);
+    ctx.restore();
+  }
+
+  /* paused: dim field (overlay buttons handled via HTML) */
+  if (gState === 'PAUSED') {
+    ctx.fillStyle = 'rgba(7,7,16,0.7)';
+    ctx.fillRect(0, 0, F, F);
+  }
+
+  ctx.restore();
+
+  /* HUD */
+  document.getElementById('p-score').textContent = player.score;
+  document.getElementById('e-score').textContent = enemy.score;
+  var m = Math.floor(gTimer / 60), se = Math.floor(gTimer % 60);
+  document.getElementById('g-timer').textContent = m + ':' + (se < 10 ? '0' : '') + se;
+
+  /* timer blink when low */
+  var timerEl = document.getElementById('g-timer');
+  if (gTimer <= 30 && gState === 'PLAYING') {
+    timerEl.classList.add('blink');
+    timerEl.style.color = '#FF3333';
+  } else {
+    timerEl.classList.remove('blink');
+    timerEl.style.color = '#FFD700';
+  }
+
+  /* pause button & overlay state */
+  var pauseRow = document.getElementById('pause-row');
+  var pauseBtn = document.getElementById('pause-btn');
+  var pauseScr = document.getElementById('pause-screen');
+  if (gState === 'MENU' || gState === 'GAMEOVER') {
+    pauseRow.style.display = 'none';
+    pauseScr.style.display = 'none';
+  } else if (gState === 'PAUSED') {
+    pauseRow.style.display = 'flex';
+    pauseBtn.textContent = '⏸ 暫停';
+    pauseBtn.disabled = true;
+    pauseScr.style.display = 'flex';
+  } else {
+    pauseScr.style.display = 'none';
+    pauseRow.style.display = 'flex';
+    if (gState === 'PLAYING') {
+      pauseBtn.textContent = '⏸ 暫停';
+      pauseBtn.disabled = false;
+    } else {
+      pauseBtn.textContent = '⏸ 暫停';
+      pauseBtn.disabled = true;
+    }
+  }
+
+  /* status bar */
+  var sb = document.getElementById('ball-status');
+  if (gState === 'PLAYING') {
+    if (ball.holder === player) {
+      sb.innerHTML = '<span class="status-dot" style="background:' + C_P + '"></span> 玩家持球 — ' + Math.ceil(ball.possT) + '秒';
+    } else if (ball.holder === enemy) {
+      sb.innerHTML = '<span class="status-dot" style="background:' + C_E + '"></span> 電腦持球 — ' + Math.ceil(ball.possT) + '秒';
+    } else if (ball.inAir) {
+      sb.innerHTML = '<span class="status-dot" style="background:' + C_BALL + '"></span> 球體飛行中...';
+    } else if (ball.abandActive) {
+      sb.innerHTML = '<span class="status-dot" style="background:#FF8800"></span> 球體被棄置 — ' + Math.ceil(ball.abandT) + '秒';
+    } else {
+      sb.innerHTML = '<span class="status-dot" style="background:' + C_BALL + '"></span> 球體等待拾取';
+    }
+  } else if (gState === 'COUNTDOWN') {
+    sb.innerHTML = '';
+  } else {
+    sb.innerHTML = '';
+  }
+
+  /* stamina bar */
+  var staminaRow = document.getElementById('stamina-row');
+  var staminaFill = document.getElementById('stamina-fill');
+  if (gState === 'PLAYING' || gState === 'PAUSED' || gState === 'COUNTDOWN' || gState === 'ANNOUNCE') {
+    staminaRow.style.display = 'block';
+    var stPct = (pStamina / STAMINA_MAX) * 100;
+    staminaFill.style.width = stPct + '%';
+    if (pExhaust > 0) {
+      staminaFill.classList.add('exhausted');
+    } else {
+      staminaFill.classList.remove('exhausted');
+    }
+  } else {
+    staminaRow.style.display = 'none';
+  }
+}
+
+function drawEnt(e) {
+  /* outer glow */
+  ctx.save();
+  ctx.shadowColor = e.color;
+  ctx.shadowBlur = e.hasBall ? 16 : 8;
+  ctx.fillStyle = e.color;
+  ctx.beginPath(); ctx.arc(e.x, e.y, PR, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  /* inner */
+  ctx.fillStyle = e === player ? '#005566' : '#660022';
+  ctx.beginPath(); ctx.arc(e.x, e.y, PR - 4, 0, Math.PI * 2); ctx.fill();
+
+  /* ball indicator ring + small ball icon */
+  if (e.hasBall) {
+    ctx.strokeStyle = C_BALL;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(e.x, e.y, PR + 5, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = C_BALL;
+    ctx.beginPath(); ctx.arc(e.x + PR * 0.75, e.y - PR * 0.75, 4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  /* sprint / exhaustion visual indicator */
+  var isSpr = (e === player) ? pSprinting : eSprinting;
+  var isExh = (e === player) ? (pExhaust > 0) : (eExhaust > 0);
+  if (isExh) {
+    /* exhaustion: pulsing red ring */
+    var exAlpha = 0.3 + Math.sin(Date.now() * 0.012) * 0.2;
+    ctx.strokeStyle = 'rgba(255,50,50,' + exAlpha.toFixed(2) + ')';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(e.x, e.y, PR + 8, 0, Math.PI * 2); ctx.stroke();
+  } else if (isSpr) {
+    /* sprinting: green speed lines */
+    ctx.strokeStyle = 'rgba(76,175,80,0.5)';
+    ctx.lineWidth = 1.5;
+    for (var li = 0; li < 3; li++) {
+      var la = (Date.now() * 0.005 + li * 2.1) % (Math.PI * 2);
+      var lx = e.x + Math.cos(la) * (PR + 6);
+      var ly = e.y + Math.sin(la) * (PR + 6);
+      ctx.beginPath(); ctx.moveTo(lx, ly);
+      ctx.lineTo(lx + Math.cos(la) * 6, ly + Math.sin(la) * 6);
+      ctx.stroke();
+    }
+  }
+
+  /* label */
+  ctx.fillStyle = '#ccc';
+  ctx.font = '9px "Exo 2"';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText(e.lbl, e.x, e.y - PR - (e.hasBall ? 16 : 4));
+}
+
+/* ============================================================
+   MAIN LOOP
+   ============================================================ */
+var lastT = 0;
+function loop(ts) {
+  if (lastT === 0) lastT = ts;
+  var dt = (ts - lastT) / 1000;
+  lastT = ts;
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+/* ============================================================
+   EVENT LISTENERS
+   ============================================================ */
+document.getElementById('start-easy').addEventListener('click', function() { startGame('easy'); });
+document.getElementById('start-normal').addEventListener('click', function() { startGame('normal'); });
+document.getElementById('start-hard').addEventListener('click', function() { startGame('hard'); });
+document.getElementById('restart-btn').addEventListener('click', function() { startGame(gameDifficulty); });
+document.getElementById('menu-btn').addEventListener('click', returnToMenu);
+document.getElementById('pause-btn').addEventListener('click', togglePause);
+document.getElementById('resume-btn').addEventListener('click', resumeGame);
+document.getElementById('pause-menu-btn').addEventListener('click', returnToMenu);
+
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', function() { setTimeout(resizeCanvas, 150); });
+
+/* Dark mode detection */
+if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+  document.documentElement.classList.add('dark');
+}
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+  if (e.matches) document.documentElement.classList.add('dark');
+  else document.documentElement.classList.remove('dark');
+});
+
+/* Init */
+resizeCanvas();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
